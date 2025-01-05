@@ -5,7 +5,7 @@ type TypeMetadata struct {
 	TypeName    string
 	TypeKind    string
 	FieldName   string
-	Nodes       []TypeMetadata
+	Nodes       []*TypeMetadata
 	Tags        map[string][]string
 	IsReference bool
 }

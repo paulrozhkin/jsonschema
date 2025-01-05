@@ -1,33 +1,76 @@
 package entity
 
+import "reflect"
+
+type DataType interface {
+	// IsType return true, if schema contains type
+	IsType(dataType JSONSchemaDataType) bool
+	// IsTypes return true, if schema corresponds to the types
+	IsTypes(dataTypes []JSONSchemaDataType) bool
+}
+
 // BaseSchema represents common fields for all schemas
 type BaseSchema[T any] struct {
-	Type        string        `json:"type"`                  // All DraftVersion
-	Title       *string       `json:"title,omitempty"`       // All DraftVersion
-	Description *string       `json:"description,omitempty"` // All DraftVersion
-	Default     *T            `json:"default,omitempty"`     // DraftVersion-06 and later
-	Examples    []T           `json:"examples,omitempty"`    // DraftVersion-06 and later
-	Const       T             `json:"const,omitempty"`       // DraftVersion-06 and later
-	Enum        []T           `json:"enum,omitempty"`        // All drafts
-	AllOf       []*JSONSchema `json:"allOf,omitempty"`       // DraftVersion-04 and later
-	AnyOf       []*JSONSchema `json:"anyOf,omitempty"`       // DraftVersion-04 and later
-	OneOf       []*JSONSchema `json:"oneOf,omitempty"`       // DraftVersion-04 and later
-	Not         *JSONSchema   `json:"not,omitempty"`         // DraftVersion-04 and later
-	Comment     *string       `json:"$comment,omitempty"`    // DraftVersion-07 and later
-	Deprecated  *bool         `json:"deprecated,omitempty"`  // DraftVersion-2019-09 and later
+	Type        JSONSchemaType `json:"type"`                  // All DraftVersion
+	Title       *string        `json:"title,omitempty"`       // All DraftVersion
+	Description *string        `json:"description,omitempty"` // All DraftVersion
+	Default     *T             `json:"default,omitempty"`     // DraftVersion-06 and later
+	Examples    []*T           `json:"examples,omitempty"`    // DraftVersion-06 and later
+	Const       *T             `json:"const,omitempty"`       // DraftVersion-06 and later
+	Enum        []*T           `json:"enum,omitempty"`        // All drafts
+	Comment     *string        `json:"$comment,omitempty"`    // DraftVersion-07 and later
+	Deprecated  *bool          `json:"deprecated,omitempty"`  // DraftVersion-2019-09 and later
+}
+
+func (s *BaseSchema[T]) IsType(dataType JSONSchemaDataType) bool {
+	for i := range s.Type {
+		if s.Type[i] == dataType {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *BaseSchema[T]) IsTypes(dataTypes []JSONSchemaDataType) bool {
+	return reflect.DeepEqual(s.Type, dataTypes)
+}
+
+// ObjectSchema represents a schema for object values
+type ObjectSchema struct {
+	BaseSchema[map[string]any]
+	Properties           map[string]DataType    `json:"properties,omitempty"`           // All DraftVersion
+	PatternProperties    map[string]DataType    `json:"patternProperties,omitempty"`    // DraftVersion-04 and later
+	AdditionalProperties *AdditionalProperties  `json:"additionalProperties,omitempty"` // All DraftVersion
+	MaxProperties        *int                   `json:"maxProperties,omitempty"`        // All DraftVersion
+	MinProperties        *int                   `json:"minProperties,omitempty"`        // All DraftVersion
+	Required             []string               `json:"required,omitempty"`             // All DraftVersion
+	Dependencies         map[string]*Dependency `json:"dependencies,omitempty"`         // DraftVersion-04, DraftVersion-06, DraftVersion-07
+	DependentSchemas     map[string]*JSONSchema `json:"dependentSchemas,omitempty"`     // DraftVersion-2019-09 and later
+	DependentRequired    map[string][]string    `json:"dependentRequired,omitempty"`    // DraftVersion-2019-09 and later
+	PropertyNames        *JSONSchema            `json:"propertyNames,omitempty"`        // DraftVersion-06 and later
+
+	// Conditional Validation
+	If   *JSONSchema `json:"if,omitempty"`   // DraftVersion-07 and later
+	Then *JSONSchema `json:"then,omitempty"` // DraftVersion-07 and later
+	Else *JSONSchema `json:"else,omitempty"` // DraftVersion-07 and later
+
+	AllOf []*JSONSchema `json:"allOf,omitempty"` // DraftVersion-04 and later
+	AnyOf []*JSONSchema `json:"anyOf,omitempty"` // DraftVersion-04 and later
+	OneOf []*JSONSchema `json:"oneOf,omitempty"` // DraftVersion-04 and later
+	Not   *JSONSchema   `json:"not,omitempty"`   // DraftVersion-04 and later
 }
 
 // JSONSchema represents the top-level structure of a JSON Schema
 type JSONSchema struct {
-	BaseSchema[any]
-	DeprecatedID *string                `json:"id,omitempty"`          // DraftVersion-04 and later
-	ID           *string                `json:"$id,omitempty"`         // DraftVersion-06 and later
-	Schema       *DraftVersion          `json:"$schema,omitempty"`     // All DraftVersion
-	Defs         map[string]*JSONSchema `json:"$defs,omitempty"`       // DraftVersion-06 and later
-	Ref          *string                `json:"$ref,omitempty"`        // All DraftVersion
-	DynamicRef   *string                `json:"$dynamicRef,omitempty"` // DraftVersion-2019-09 and later
-	Anchor       *string                `json:"$anchor,omitempty"`     // DraftVersion-2019-09 and later
-	Vocabulary   map[string]bool        `json:"$vocabulary,omitempty"` // DraftVersion-2019-09 and later
+	ObjectSchema
+	DeprecatedID *string                  `json:"id,omitempty"`          // DraftVersion-04 and later
+	ID           *string                  `json:"$id,omitempty"`         // DraftVersion-06 and later
+	Schema       *DraftVersion            `json:"$schema,omitempty"`     // All DraftVersion
+	Defs         map[string]*ObjectSchema `json:"$defs,omitempty"`       // DraftVersion-06 and later
+	Ref          *string                  `json:"$ref,omitempty"`        // All DraftVersion
+	DynamicRef   *string                  `json:"$dynamicRef,omitempty"` // DraftVersion-2019-09 and later
+	Anchor       *string                  `json:"$anchor,omitempty"`     // DraftVersion-2019-09 and later
+	Vocabulary   map[string]string        `json:"$vocabulary,omitempty"` // DraftVersion-2019-09 and later
 }
 
 // NumericSchema represents a base schema for numeric values
@@ -86,26 +129,6 @@ type ArraySchema struct {
 	UnevaluatedItems *JSONSchema   `json:"unevaluatedItems,omitempty"` // DraftVersion-2019-09 and later
 }
 
-// ObjectSchema represents a schema for object values
-type ObjectSchema struct {
-	BaseSchema[map[string]any]
-	Properties           map[string]*JSONSchema `json:"properties,omitempty"`           // All DraftVersion
-	PatternProperties    map[string]*JSONSchema `json:"patternProperties,omitempty"`    // DraftVersion-04 and later
-	AdditionalProperties *AdditionalProperties  `json:"additionalProperties,omitempty"` // All DraftVersion
-	MaxProperties        *int                   `json:"maxProperties,omitempty"`        // All DraftVersion
-	MinProperties        *int                   `json:"minProperties,omitempty"`        // All DraftVersion
-	Required             []string               `json:"required,omitempty"`             // All DraftVersion
-	Dependencies         map[string]*Dependency `json:"dependencies,omitempty"`         // DraftVersion-04, DraftVersion-06, DraftVersion-07
-	DependentSchemas     map[string]*JSONSchema `json:"dependentSchemas,omitempty"`     // DraftVersion-2019-09 and later
-	DependentRequired    map[string][]string    `json:"dependentRequired,omitempty"`    // DraftVersion-2019-09 and later
-	PropertyNames        *JSONSchema            `json:"propertyNames,omitempty"`        // DraftVersion-06 and later
-
-	// Conditional Validation
-	If   *JSONSchema `json:"if,omitempty"`   // DraftVersion-07 and later
-	Then *JSONSchema `json:"then,omitempty"` // DraftVersion-07 and later
-	Else *JSONSchema `json:"else,omitempty"` // DraftVersion-07 and later
-}
-
 // AdditionalProperties represents the additionalProperties keyword
 // Can be either a boolean or a JSONSchema
 type AdditionalProperties struct {
@@ -139,12 +162,15 @@ func NewDependencySchema(schema *JSONSchema) *Dependency {
 }
 
 // NewJSONSchema Builder functions for JSONSchema and other schema types
-func NewJSONSchema(schema DraftVersion) *JSONSchema {
+func NewJSONSchema() *JSONSchema {
 	return &JSONSchema{
-		BaseSchema: BaseSchema[any]{Type: "object"},
-		Schema:     &schema,
-		Defs:       make(map[string]*JSONSchema),
+		ObjectSchema: *NewObjectSchema(),
 	}
+}
+
+func (s *JSONSchema) SetTitle(title string) *JSONSchema {
+	s.Title = &title
+	return s
 }
 
 func (s *JSONSchema) SetID(id string) *JSONSchema {
@@ -152,8 +178,8 @@ func (s *JSONSchema) SetID(id string) *JSONSchema {
 	return s
 }
 
-func (s *JSONSchema) SetTitle(title string) *JSONSchema {
-	s.Title = &title
+func (s *JSONSchema) SetSchemaVersion(version DraftVersion) *JSONSchema {
+	s.Schema = &version
 	return s
 }
 
@@ -162,20 +188,25 @@ func (s *JSONSchema) SetDescription(description string) *JSONSchema {
 	return s
 }
 
-func (s *JSONSchema) AddDefinition(name string, schema *JSONSchema) *JSONSchema {
+func (s *JSONSchema) SetSchema(draft DraftVersion) *JSONSchema {
+	s.Schema = &draft
+	return s
+}
+
+func (s *JSONSchema) AddDefinition(name string, schema *ObjectSchema) *JSONSchema {
 	s.Defs[name] = schema
 	return s
 }
 
 func NewNumberSchema() *NumberSchema {
 	schema := new(NumberSchema)
-	schema.Type = "number"
+	schema.Type = JSONSchemaType{JSONSchemaNumber}
 	return schema
 }
 
 func NewIntegerSchema() *IntegerSchema {
 	schema := new(IntegerSchema)
-	schema.Type = "integer"
+	schema.Type = JSONSchemaType{JSONSchemaInteger}
 	return schema
 }
 
@@ -196,7 +227,7 @@ func (s *NumberSchema) SetMinimum(value float64) *NumberSchema {
 
 func NewStringSchema() *StringSchema {
 	return &StringSchema{
-		BaseSchema: BaseSchema[string]{Type: "string"},
+		BaseSchema: BaseSchema[string]{Type: JSONSchemaType{JSONSchemaString}},
 	}
 }
 
@@ -212,12 +243,14 @@ func (s *StringSchema) SetPattern(pattern string) *StringSchema {
 
 func NewObjectSchema() *ObjectSchema {
 	return &ObjectSchema{
-		BaseSchema: BaseSchema[map[string]any]{Type: "object"},
-		Properties: make(map[string]*JSONSchema),
+		BaseSchema: BaseSchema[map[string]any]{Type: JSONSchemaType{JSONSchemaObject}},
 	}
 }
 
-func (s *ObjectSchema) AddProperty(name string, schema *JSONSchema) *ObjectSchema {
+func (s *ObjectSchema) AddProperty(name string, schema DataType) *ObjectSchema {
+	if s.Properties == nil {
+		s.Properties = make(map[string]DataType)
+	}
 	s.Properties[name] = schema
 	return s
 }

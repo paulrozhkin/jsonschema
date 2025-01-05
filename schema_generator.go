@@ -11,14 +11,14 @@ var ErrParserNotFound = errors.New("parser not found")
 var ErrConverterNotFound = errors.New("metadata to jsonschema converter not found")
 
 type AfterParseFunc func(*entity.TypeMetadata) error
-type AfterConvertFunc func(schema *entity.JsonSchema) error
+type AfterConvertFunc func(schema *entity.JSONSchema) error
 
 type SchemaGenerator struct {
 	Parser       parser.Parser
 	Converter    converter.Converter
 	AfterParse   AfterParseFunc
 	AfterConvert AfterConvertFunc
-	jsonSchema   *entity.JsonSchema
+	jsonSchema   *entity.JSONSchema
 	Config       entity.Config
 }
 
@@ -63,7 +63,7 @@ func (g *SchemaGenerator) Generate() error {
 	if g.Converter == nil {
 		return ErrConverterNotFound
 	}
-	jsonSchema, err := g.Converter.Convert(metadata)
+	jsonSchema, err := g.Converter.Convert(g.Config, metadata)
 	if err != nil {
 		return err
 	}
