@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/paulrozhkin/jsonschema/pkg/converter"
 	"github.com/paulrozhkin/jsonschema/pkg/entity"
@@ -78,6 +79,6 @@ func (g *SchemaGenerator) Generate() error {
 	return nil
 }
 
-func (g *SchemaGenerator) ToJson() string {
-	panic("implement me")
+func (g *SchemaGenerator) ToJson() ([]byte, error) {
+	return json.MarshalIndent(g.jsonSchema, "", "  ")
 }
