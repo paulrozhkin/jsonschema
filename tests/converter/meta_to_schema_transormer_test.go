@@ -4,7 +4,7 @@ import (
 	"github.com/paulrozhkin/jsonschema/pkg/converter"
 	"github.com/paulrozhkin/jsonschema/pkg/entity"
 	"github.com/paulrozhkin/jsonschema/tests/base"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -15,6 +15,6 @@ func TestConvertMetadataToJSONSchema(t *testing.T) {
 
 	schemaConverter := converter.NewMetaToSchemaConverter()
 	result, err := schemaConverter.Convert(cfg, expectedMetadata)
-	assert.Nil(t, err)
-	assert.Equal(t, expectedJsonSchema, result)
+	require.Nil(t, err)
+	require.Equal(t, expectedJsonSchema, result)
 }

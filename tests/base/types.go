@@ -51,17 +51,24 @@ func ExpectedSettingsMetadata() *entity.JsonSchemaMetadata {
 }
 
 func ExpectedSettingsJsonSchema() *entity.JSONSchema {
-	//packageAdditional := reflect.TypeOf(additional.InnerSettings{}).PkgPath()
+	packageAdditional := reflect.TypeOf(additional.InnerSettings{}).PkgPath()
 	packageBase := reflect.TypeOf(Settings{}).PkgPath()
 
 	floatValueSchema := entity.NewNumberSchema()
+	innerSettingsSchema := entity.NewObjectSchema().
+		AddProperty("stringValue", entity.NewStringSchema()).
+		AddProperty("intValue", entity.NewIntegerSchema()).
+		AddProperty("boolValue", entity.NewBooleanSchema())
+	innerSettingsId := fmt.Sprintf("%s#%s", packageAdditional, "InnerSettings")
 
-	schema := entity.NewJSONSchema().
+	schema := entity.NewJSONSchema()
+	schema.
 		SetSchema(entity.Draft202012).
-		SetID(fmt.Sprintf("https://%s/%s", packageBase, "Settings"))
-
-	schema.AddProperty("floatValue", floatValueSchema)
-
+		SetID(fmt.Sprintf("https://%s/%s", packageBase, "Settings")).
+		AddDefinition(innerSettingsId, innerSettingsSchema).
+		AddProperty("valInnerSettings", entity.NewJSONSchema().SetRef(innerSettingsId)).
+		AddProperty("refInnerSettings", entity.NewJSONSchema().SetRef(innerSettingsId)).
+		AddProperty("floatValue", floatValueSchema)
 	return schema
 
 }

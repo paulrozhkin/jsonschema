@@ -63,14 +63,14 @@ type ObjectSchema struct {
 // JSONSchema represents the top-level structure of a JSON Schema
 type JSONSchema struct {
 	ObjectSchema
-	DeprecatedID *string                  `json:"id,omitempty"`          // DraftVersion-04 and later
-	ID           *string                  `json:"$id,omitempty"`         // DraftVersion-06 and later
-	Schema       *DraftVersion            `json:"$schema,omitempty"`     // All DraftVersion
-	Defs         map[string]*ObjectSchema `json:"$defs,omitempty"`       // DraftVersion-06 and later
-	Ref          *string                  `json:"$ref,omitempty"`        // All DraftVersion
-	DynamicRef   *string                  `json:"$dynamicRef,omitempty"` // DraftVersion-2019-09 and later
-	Anchor       *string                  `json:"$anchor,omitempty"`     // DraftVersion-2019-09 and later
-	Vocabulary   map[string]string        `json:"$vocabulary,omitempty"` // DraftVersion-2019-09 and later
+	DeprecatedID *string             `json:"id,omitempty"`          // DraftVersion-04 and later
+	ID           *string             `json:"$id,omitempty"`         // DraftVersion-06 and later
+	Schema       *DraftVersion       `json:"$schema,omitempty"`     // All DraftVersion
+	Defs         map[string]DataType `json:"$defs,omitempty"`       // DraftVersion-06 and later
+	Ref          *string             `json:"$ref,omitempty"`        // All DraftVersion
+	DynamicRef   *string             `json:"$dynamicRef,omitempty"` // DraftVersion-2019-09 and later
+	Anchor       *string             `json:"$anchor,omitempty"`     // DraftVersion-2019-09 and later
+	Vocabulary   map[string]string   `json:"$vocabulary,omitempty"` // DraftVersion-2019-09 and later
 }
 
 // NumericSchema represents a base schema for numeric values
@@ -193,8 +193,16 @@ func (s *JSONSchema) SetSchema(draft DraftVersion) *JSONSchema {
 	return s
 }
 
-func (s *JSONSchema) AddDefinition(name string, schema *ObjectSchema) *JSONSchema {
+func (s *JSONSchema) AddDefinition(name string, schema DataType) *JSONSchema {
+	if s.Defs == nil {
+		s.Defs = make(map[string]DataType)
+	}
 	s.Defs[name] = schema
+	return s
+}
+
+func (s *JSONSchema) SetRef(ref string) *JSONSchema {
+	s.Ref = &ref
 	return s
 }
 
@@ -258,4 +266,10 @@ func (s *ObjectSchema) AddProperty(name string, schema DataType) *ObjectSchema {
 func (s *ObjectSchema) SetRequired(fields ...string) *ObjectSchema {
 	s.Required = fields
 	return s
+}
+
+func NewBooleanSchema() *BooleanSchema {
+	schema := new(BooleanSchema)
+	schema.Type = JSONSchemaType{JSONSchemaBoolean}
+	return schema
 }

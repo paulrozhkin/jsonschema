@@ -20,13 +20,84 @@ func (c *MetaToSchemaConverter) Convert(config entity.Config, metadata *entity.J
 		SetSchema(config.SchemaVersion).
 		SetID(c.getIdFromRootType(metadata.Root))
 
-	for _, node := range metadata.Root.Nodes {
-		dataType := typeKindToJsonSchemaType(node.TypeKind)
-		if dataType == entity.JSONSchemaNumber {
-			schema.AddProperty(getFieldName(node), entity.NewNumberSchema())
+	definitions, err := createDefinitions(metadata.Types)
+	if err != nil {
+		return nil, err
+	}
+	schema.Defs = definitions
+	rootObject := schema.Defs[metadata.Root.ID()].(*entity.ObjectSchema)
+	delete(schema.Defs, metadata.Root.ID())
+	schema.Properties = rootObject.Properties
+
+	//for _, node := range metadata.Root.Nodes {
+	//	dataType := typeKindToJsonSchemaType(node.TypeKind)
+	//	if dataType == entity.JSONSchemaNumber {
+	//		schema.AddProperty(getFieldName(node), entity.NewNumberSchema())
+	//	}
+	//}
+	return schema, nil
+}
+
+func createDefinitions(dataTypeDefinitions map[string]*entity.DataTypeMetadata) (map[string]entity.DataType, error) {
+	if len(dataTypeDefinitions) == 0 {
+		return nil, nil
+	}
+	definitions := make(map[string]entity.DataType)
+	for _, dataTypeMetadata := range dataTypeDefinitions {
+		dataType := typeKindToJsonSchemaType(dataTypeMetadata.TypeKind)
+		if dataType != entity.JSONSchemaObject {
+			return nil, fmt.Errorf("invalid data type for definisions: %s. Only struct supported", dataTypeMetadata.TypeKind)
+		}
+		_, err := transformObjectToObjectSchema(definitions, dataTypeMetadata)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return schema, nil
+	return definitions, nil
+}
+
+func transformObjectToObjectSchema(definitions map[string]entity.DataType,
+	dataTypeMetadata *entity.DataTypeMetadata) (*entity.ObjectSchema, error) {
+	if dataTypeMetadata.Ref != nil {
+		dataTypeMetadata = dataTypeMetadata.Ref
+	}
+	if objectSchema, ok := definitions[dataTypeMetadata.ID()]; ok {
+		return objectSchema.(*entity.ObjectSchema), nil
+	}
+
+	objectSchema := entity.NewObjectSchema()
+	definitions[dataTypeMetadata.ID()] = objectSchema
+
+	for _, node := range dataTypeMetadata.Nodes {
+		dataType := typeKindToJsonSchemaType(node.TypeKind)
+		switch dataType {
+		case entity.JSONSchemaNumber:
+			objectSchema.AddProperty(getFieldName(node), entity.NewNumberSchema())
+		case entity.JSONSchemaString:
+			objectSchema.AddProperty(getFieldName(node), entity.NewStringSchema())
+		case entity.JSONSchemaBoolean:
+			objectSchema.AddProperty(getFieldName(node), entity.NewBooleanSchema())
+		case entity.JSONSchemaInteger:
+			objectSchema.AddProperty(getFieldName(node), entity.NewIntegerSchema())
+		case entity.JSONSchemaUnknown:
+			if node.Ref != nil {
+				objectSchema.AddProperty(getFieldName(node), entity.NewJSONSchema().SetRef(node.Ref.ID()))
+			} else {
+				return nil, fmt.Errorf("invalid object field %s for %s (%s)", dataTypeMetadata.TypeName,
+					node.TypeName, node.TypeKind)
+			}
+			//	objectSchemaNode, err := transformObjectToObjectSchema(definitions, node)
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//	objectSchema.AddProperty(getFieldName(node), objectSchemaNode)
+		//case entity.JSONSchemaArray:
+		default:
+			return nil, fmt.Errorf("invalid object field %s for %s (%s)", dataTypeMetadata.TypeName,
+				node.TypeName, node.TypeKind)
+		}
+	}
+	return objectSchema, nil
 }
 
 func getFieldName(metadata *entity.DataTypeMetadata) string {
