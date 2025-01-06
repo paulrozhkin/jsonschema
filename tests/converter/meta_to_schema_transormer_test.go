@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestReflectFromType(t *testing.T) {
+func TestConvertMetadataToJSONSchema(t *testing.T) {
 	expectedMetadata := base.ExpectedSettingsMetadata()
 	expectedJsonSchema := base.ExpectedSettingsJsonSchema()
 	cfg := entity.Config{SchemaVersion: entity.Draft202012}

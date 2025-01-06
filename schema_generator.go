@@ -10,7 +10,7 @@ import (
 var ErrParserNotFound = errors.New("parser not found")
 var ErrConverterNotFound = errors.New("metadata to jsonschema converter not found")
 
-type AfterParseFunc func(*entity.TypeMetadata) error
+type AfterParseFunc func(metadata *entity.JsonSchemaMetadata) error
 type AfterConvertFunc func(schema *entity.JSONSchema) error
 
 type SchemaGenerator struct {

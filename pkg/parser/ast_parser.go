@@ -10,6 +10,6 @@ func NewAstParser(parsingObj any) *AstParser {
 	return &AstParser{parsingObj: parsingObj}
 }
 
-func (p *AstParser) Parse() (*entity.TypeMetadata, error) {
+func (p *AstParser) Parse() (*entity.JsonSchemaMetadata, error) {
 	panic("implement me")
 }

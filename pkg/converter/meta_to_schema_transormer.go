@@ -6,7 +6,7 @@ import (
 )
 
 type Converter interface {
-	Convert(config entity.Config, metadata *entity.TypeMetadata) (*entity.JSONSchema, error)
+	Convert(config entity.Config, metadata *entity.JsonSchemaMetadata) (*entity.JSONSchema, error)
 }
 
 type MetaToSchemaConverter struct{}
@@ -15,12 +15,12 @@ func NewMetaToSchemaConverter() *MetaToSchemaConverter {
 	return &MetaToSchemaConverter{}
 }
 
-func (c *MetaToSchemaConverter) Convert(config entity.Config, metadata *entity.TypeMetadata) (*entity.JSONSchema, error) {
+func (c *MetaToSchemaConverter) Convert(config entity.Config, metadata *entity.JsonSchemaMetadata) (*entity.JSONSchema, error) {
 	schema := entity.NewJSONSchema().
 		SetSchema(config.SchemaVersion).
-		SetID(c.getIdFromRootType(metadata))
+		SetID(c.getIdFromRootType(metadata.Root))
 
-	for _, node := range metadata.Nodes {
+	for _, node := range metadata.Root.Nodes {
 		dataType := typeKindToJsonSchemaType(node.TypeKind)
 		if dataType == entity.JSONSchemaNumber {
 			schema.AddProperty(getFieldName(node), entity.NewNumberSchema())
@@ -29,7 +29,7 @@ func (c *MetaToSchemaConverter) Convert(config entity.Config, metadata *entity.T
 	return schema, nil
 }
 
-func getFieldName(metadata *entity.TypeMetadata) string {
+func getFieldName(metadata *entity.DataTypeMetadata) string {
 	if jsonTags, ok := metadata.Tags["json"]; ok {
 		return jsonTags[0]
 	}
@@ -56,7 +56,7 @@ func typeKindToJsonSchemaType(typeKind string) entity.JSONSchemaDataType {
 	return entity.JSONSchemaUnknown
 }
 
-func (c *MetaToSchemaConverter) getIdFromRootType(rootMetadata *entity.TypeMetadata) string {
+func (c *MetaToSchemaConverter) getIdFromRootType(rootMetadata *entity.DataTypeMetadata) string {
 	// Attempt to set the schema ID
 	return fmt.Sprintf("https://%s/%s", rootMetadata.Package, rootMetadata.TypeName)
 	//if !r.Anonymous && s.ID == EmptyID {

@@ -3,7 +3,7 @@ package parser
 import (
 	"github.com/paulrozhkin/jsonschema/pkg/parser"
 	"github.com/paulrozhkin/jsonschema/tests/base"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -12,6 +12,6 @@ func TestReflectFromType(t *testing.T) {
 	obj := &base.Settings{}
 	reflectParser := parser.NewReflectParser(obj)
 	result, err := reflectParser.Parse()
-	assert.Nil(t, err)
-	assert.Equal(t, expectedMetadata, result)
+	require.Nil(t, err)
+	require.EqualValues(t, expectedMetadata, result)
 }
