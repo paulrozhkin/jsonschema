@@ -52,7 +52,7 @@ func parseTypeMetadata(t reflect.Type) *entity.TypeMetadata {
 			nodeMetadata := parseTypeMetadata(fieldType)
 
 			// Populate metadata for each field
-			metadata.Nodes = append(metadata.Nodes, entity.TypeMetadata{
+			metadata.Nodes = append(metadata.Nodes, &entity.TypeMetadata{
 				FieldName:   field.Name,
 				Package:     fieldType.PkgPath(),
 				TypeName:    fieldType.Name(),
