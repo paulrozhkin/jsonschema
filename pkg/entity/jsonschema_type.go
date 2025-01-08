@@ -23,7 +23,9 @@ type JSONSchemaType []JSONSchemaDataType
 
 // MarshalJSON handles custom marshaling for JSONSchemaType
 func (t JSONSchemaType) MarshalJSON() ([]byte, error) {
-	if len(t) == 1 {
+	if len(t) == 0 {
+		return []byte(""), nil
+	} else if len(t) == 1 {
 		// If there's only one type, marshal as a single string
 		return json.Marshal(t[0])
 	}

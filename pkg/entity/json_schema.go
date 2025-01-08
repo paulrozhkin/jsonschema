@@ -11,7 +11,7 @@ type DataType interface {
 
 // BaseSchema represents common fields for all schemas
 type BaseSchema[T any] struct {
-	Type        JSONSchemaType `json:"type"`                  // All DraftVersion
+	Type        JSONSchemaType `json:"type,omitempty"`        // All DraftVersion
 	Title       *string        `json:"title,omitempty"`       // All DraftVersion
 	Description *string        `json:"description,omitempty"` // All DraftVersion
 	Default     *T             `json:"default,omitempty"`     // DraftVersion-06 and later
