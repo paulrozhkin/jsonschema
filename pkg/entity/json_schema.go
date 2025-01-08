@@ -62,7 +62,6 @@ type ObjectSchema struct {
 
 // JSONSchema represents the top-level structure of a JSON Schema
 type JSONSchema struct {
-	ObjectSchema
 	DeprecatedID *string             `json:"id,omitempty"`          // DraftVersion-04 and later
 	ID           *string             `json:"$id,omitempty"`         // DraftVersion-06 and later
 	Schema       *DraftVersion       `json:"$schema,omitempty"`     // All DraftVersion
@@ -71,6 +70,8 @@ type JSONSchema struct {
 	DynamicRef   *string             `json:"$dynamicRef,omitempty"` // DraftVersion-2019-09 and later
 	Anchor       *string             `json:"$anchor,omitempty"`     // DraftVersion-2019-09 and later
 	Vocabulary   map[string]string   `json:"$vocabulary,omitempty"` // DraftVersion-2019-09 and later
+
+	ObjectSchema
 }
 
 // NumericSchema represents a base schema for numeric values
@@ -161,6 +162,11 @@ func NewDependencySchema(schema *JSONSchema) *Dependency {
 	return &Dependency{SchemaDependency: schema}
 }
 
+// NewJSONEmptySchema Builder functions for JSONSchema without Type
+func NewJSONEmptySchema() *JSONSchema {
+	return &JSONSchema{}
+}
+
 // NewJSONSchema Builder functions for JSONSchema and other schema types
 func NewJSONSchema() *JSONSchema {
 	return &JSONSchema{
@@ -218,17 +224,17 @@ func NewIntegerSchema() *IntegerSchema {
 	return schema
 }
 
-func (s *NumberSchema) SetMultipleOf(value float64) *NumberSchema {
+func (s *IntegerSchema) SetMultipleOf(value int) *IntegerSchema {
 	s.MultipleOf = &value
 	return s
 }
 
-func (s *NumberSchema) SetMaximum(value float64) *NumberSchema {
+func (s *IntegerSchema) SetMaximum(value int) *IntegerSchema {
 	s.Maximum = &value
 	return s
 }
 
-func (s *NumberSchema) SetMinimum(value float64) *NumberSchema {
+func (s *IntegerSchema) SetMinimum(value int) *IntegerSchema {
 	s.Minimum = &value
 	return s
 }
@@ -260,6 +266,11 @@ func (s *ObjectSchema) AddProperty(name string, schema DataType) *ObjectSchema {
 		s.Properties = make(map[string]DataType)
 	}
 	s.Properties[name] = schema
+	return s
+}
+
+func (s *ObjectSchema) AddRequired(requiredProperties ...string) *ObjectSchema {
+	s.Required = append(s.Required, requiredProperties...)
 	return s
 }
 

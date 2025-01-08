@@ -83,14 +83,12 @@ func transformObjectToObjectSchema(definitions map[string]entity.DataType,
 			objectSchema.AddProperty(getFieldName(node), integerSchema)
 		case entity.JSONSchemaUnknown:
 			if node.Ref != nil {
-				schema := entity.NewJSONSchema().SetRef(fmt.Sprintf("#/$defs/%s", node.Ref.TypeName))
-				schema.Type = nil
+				schema := entity.NewJSONEmptySchema().SetRef(fmt.Sprintf("#/$defs/%s", node.Ref.TypeName))
 				objectSchema.AddProperty(getFieldName(node), schema)
 			} else {
 				return nil, fmt.Errorf("invalid object field %s for %s (%s)", dataTypeMetadata.TypeName,
 					node.TypeName, node.TypeKind)
 			}
-		//case entity.JSONSchemaArray:
 		default:
 			return nil, fmt.Errorf("not supported type for object field %s for %s (%s)", dataTypeMetadata.TypeName,
 				node.TypeName, node.TypeKind)
