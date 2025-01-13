@@ -20,6 +20,8 @@ type BaseSchema[T any] struct {
 	Enum        []*T           `json:"enum,omitempty"`        // All drafts
 	Comment     *string        `json:"$comment,omitempty"`    // DraftVersion-07 and later
 	Deprecated  *bool          `json:"deprecated,omitempty"`  // DraftVersion-2019-09 and later
+	ReadOnly    *bool          `json:"readOnly,omitempty"`    // DraftVersion-2019-09 and later
+	WriteOnly   *bool          `json:"writeOnly,omitempty"`   // DraftVersion-07 and later
 }
 
 func (s *BaseSchema[T]) IsType(dataType JSONSchemaDataType) bool {
