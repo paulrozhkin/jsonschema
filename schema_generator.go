@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/paulrozhkin/jsonschema/pkg/converter"
 	"github.com/paulrozhkin/jsonschema/pkg/entity"
@@ -10,15 +11,15 @@ import (
 var ErrParserNotFound = errors.New("parser not found")
 var ErrConverterNotFound = errors.New("metadata to jsonschema converter not found")
 
-type AfterParseFunc func(*entity.TypeMetadata) error
-type AfterConvertFunc func(schema *entity.JsonSchema) error
+type AfterParseFunc func(metadata *entity.JsonSchemaMetadata) error
+type AfterConvertFunc func(schema *entity.JSONSchema) error
 
 type SchemaGenerator struct {
 	Parser       parser.Parser
 	Converter    converter.Converter
 	AfterParse   AfterParseFunc
 	AfterConvert AfterConvertFunc
-	jsonSchema   *entity.JsonSchema
+	jsonSchema   *entity.JSONSchema
 	Config       entity.Config
 }
 
@@ -63,7 +64,7 @@ func (g *SchemaGenerator) Generate() error {
 	if g.Converter == nil {
 		return ErrConverterNotFound
 	}
-	jsonSchema, err := g.Converter.Convert(metadata)
+	jsonSchema, err := g.Converter.Convert(g.Config, metadata)
 	if err != nil {
 		return err
 	}
@@ -78,6 +79,6 @@ func (g *SchemaGenerator) Generate() error {
 	return nil
 }
 
-func (g *SchemaGenerator) ToJson() string {
-	panic("implement me")
+func (g *SchemaGenerator) ToJson() ([]byte, error) {
+	return json.MarshalIndent(g.jsonSchema, "", "  ")
 }
