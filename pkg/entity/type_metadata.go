@@ -1,43 +1,42 @@
 package entity
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
-type TypeMetadata struct {
-	Package     string
-	TypeName    string
-	TypeKind    string
-	FieldName   string
-	Nodes       []*TypeMetadata
-	Tags        map[string][]string
-	IsReference bool
+type JsonSchemaMetadata struct {
+	Types map[string]*DataTypeMetadata
+	Root  *DataTypeMetadata
 }
 
-func (tm *TypeMetadata) String(indentLevel int) string {
-	var sb strings.Builder
-	indent := strings.Repeat("  ", indentLevel)
+type DataTypeMetadata struct {
+	Ref       *DataTypeMetadata
+	Package   string
+	TypeName  string
+	TypeKind  string
+	FieldName string
+	Nodes     []*DataTypeMetadata
+	Tags      map[string][]string
+	IsPointer bool
+}
 
-	sb.WriteString(fmt.Sprintf("%sPackage: %s\n", indent, tm.Package))
-	sb.WriteString(fmt.Sprintf("%sTypeName: %s\n", indent, tm.TypeName))
-	sb.WriteString(fmt.Sprintf("%sTypeKind: %s\n", indent, tm.TypeKind))
-	sb.WriteString(fmt.Sprintf("%sFieldName: %s\n", indent, tm.FieldName))
-	sb.WriteString(fmt.Sprintf("%sIsReference: %t\n", indent, tm.IsReference))
+func NewJsonSchemaMetadata() *JsonSchemaMetadata {
+	return &JsonSchemaMetadata{Types: make(map[string]*DataTypeMetadata), Root: nil}
+}
 
-	if len(tm.Tags) > 0 {
-		sb.WriteString(fmt.Sprintf("%sTags:\n", indent))
-		for key, values := range tm.Tags {
-			sb.WriteString(fmt.Sprintf("%s  %s: %v\n", indent, key, values))
-		}
+func NewDataTypeRefMetadata(ref *DataTypeMetadata) *DataTypeMetadata {
+	return &DataTypeMetadata{
+		Ref: ref,
 	}
+}
 
-	if len(tm.Nodes) > 0 {
-		sb.WriteString(fmt.Sprintf("%sNodes:\n", indent))
-		for _, node := range tm.Nodes {
-			sb.WriteString(node.String(indentLevel + 1))
-		}
+func NewDataTypeMetadata(packageName, typeName, typeKind string, isReference bool) *DataTypeMetadata {
+	return &DataTypeMetadata{
+		Package:   packageName,
+		TypeName:  typeName,
+		TypeKind:  typeKind,
+		IsPointer: isReference,
 	}
+}
 
-	return sb.String()
+func (m *DataTypeMetadata) ID() string {
+	return fmt.Sprintf("%s#%s", m.Package, m.TypeName)
 }

@@ -2,7 +2,7 @@ package entity
 
 type Config struct {
 	// SchemaVersion determinate draft that will be generate
-	SchemaVersion Draft
+	SchemaVersion DraftVersion
 
 	// FieldNameTag will change the tag used to get field names. json tags are used by default.
 	FieldNameTag []string

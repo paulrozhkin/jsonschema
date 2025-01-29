@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paulrozhkin/jsonschema/tests/base/Settings",
+  "type": "object",
+  "properties": {
+    "valInnerSettings": {
+      "$ref": "#/$defs/InnerSettings"
+    },
+    "refInnerSettings": {
+      "$ref": "#/$defs/InnerSettings"
+    },
+    "floatValue": {
+      "type": "number"
+    }
+  },
+  "required": ["valInnerSettings", "floatValue"],
+  "$defs": {
+    "InnerSettings": {
+      "type": "object",
+      "properties": {
+        "stringValue": {
+          "type": "string"
+        },
+        "intValue": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "boolValue": {
+          "type": "boolean"
+        }
+      },
+      "required": ["stringValue", "intValue", "boolValue"]
+    }
+  }
+}
