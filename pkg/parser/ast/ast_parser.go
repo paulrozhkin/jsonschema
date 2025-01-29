@@ -23,7 +23,7 @@ func NewAstParser(typeName, packageName string) *AstParser {
 	}
 }
 
-func (p *AstParser) Parse() (*entity.TypeMetadata, error) {
+func (p *AstParser) Parse() (*entity.JsonSchemaMetadata, error) {
 	if p.packageName == "." {
 		dir, err := os.Getwd()
 		if err != nil {

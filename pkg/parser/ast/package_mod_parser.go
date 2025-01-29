@@ -16,7 +16,7 @@ var (
 
 type packageModeParser struct{}
 
-func (p *packageModeParser) parsePackage(packageName string, structName string) (*entity.TypeMetadata, error) {
+func (p *packageModeParser) parsePackage(packageName string, structName string) (*entity.JsonSchemaMetadata, error) {
 	pkg, err := p.loadPackage(packageName)
 	if err != nil {
 		return nil, fmt.Errorf("load package: %w", err)
@@ -61,7 +61,7 @@ func (p *packageModeParser) loadPackage(packageName string) (*packages.Package, 
 	return pkgs[0], nil
 }
 
-func (p *packageModeParser) extractMetadataFromPackage(pkg *packages.Package, structName string) (*entity.TypeMetadata, error) {
+func (p *packageModeParser) extractMetadataFromPackage(pkg *packages.Package, structName string) (*entity.JsonSchemaMetadata, error) {
 	obj := pkg.Types.Scope().Lookup(structName)
 	if obj == nil {
 		return nil, fmt.Errorf("struct %s does not exist", structName)
@@ -75,7 +75,7 @@ func (p *packageModeParser) extractMetadataFromPackage(pkg *packages.Package, st
 	return modelIface, nil
 }
 
-func (p *packageModeParser) parseStruct(obj types.Object) (*entity.TypeMetadata, error) {
+func (p *packageModeParser) parseStruct(obj types.Object) (*entity.JsonSchemaMetadata, error) {
 	named, ok := types.Unalias(obj.Type()).(*types.Named)
 	if !ok {
 		return nil, fmt.Errorf("%s is not an struct. it is a %T", obj.Name(), obj.Type().Underlying())
@@ -86,31 +86,39 @@ func (p *packageModeParser) parseStruct(obj types.Object) (*entity.TypeMetadata,
 		return nil, fmt.Errorf("%s is not an struct. it is a %T", obj.Name(), obj.Type().Underlying())
 	}
 
-	mainMetadata := &entity.TypeMetadata{
-		Package:     obj.Pkg().Path(),
-		TypeName:    obj.Name(),
-		TypeKind:    "struct",
-		Nodes:       make([]*entity.TypeMetadata, strct.NumFields()),
-		Tags:        nil,
-		IsReference: false,
+	root := entity.NewDataTypeMetadata(obj.Pkg().Path(), obj.Name(), "struct", false)
+	root.Nodes = make([]*entity.DataTypeMetadata, strct.NumFields())
+
+	mainMetadata := &entity.JsonSchemaMetadata{
+		/*
+			Root: &entity.DataTypeMetadata{
+				Package:     obj.Pkg().Path(),
+				TypeName:    obj.Name(),
+				TypeKind:    "struct",
+				Nodes:       make([]*entity.DataTypeMetadata, strct.NumFields()),
+				Tags:        nil,
+				IsPointer: false,
+			},
+		*/
+		Root: entity.NewDataTypeMetadata(obj.Pkg().Path(), obj.Name(), "struct", false),
 	}
-	initNodes(mainMetadata)
-	parseStructInRecursion(mainMetadata, strct)
+	initNodes(mainMetadata.Root)
+	parseStructInRecursion(mainMetadata.Root, strct)
 	return mainMetadata, nil
 }
 
-func initNodes(metadata *entity.TypeMetadata) {
+func initNodes(metadata *entity.DataTypeMetadata) {
 	for i := 0; i < len(metadata.Nodes); i++ {
-		metadata.Nodes[i] = &entity.TypeMetadata{}
+		metadata.Nodes[i] = &entity.DataTypeMetadata{}
 	}
 }
 
-func parseStructInRecursion(typeMetadata *entity.TypeMetadata, strct *types.Struct) {
+func parseStructInRecursion(typeMetadata *entity.DataTypeMetadata, strct *types.Struct) {
 	for i := 0; i < strct.NumFields(); i++ {
 		field := strct.Field(i)
 
 		_, ok := field.Type().(*types.Pointer)
-		typeMetadata.Nodes[i].IsReference = ok
+		typeMetadata.Nodes[i].IsPointer = ok
 		typeMetadata.Nodes[i].FieldName = field.Name()
 		typeMetadata.Nodes[i].Package = field.Pkg().Path()
 
@@ -156,7 +164,7 @@ func parseStructInRecursion(typeMetadata *entity.TypeMetadata, strct *types.Stru
 			}
 			tmpStruct, ok := underlying.(*types.Struct)
 			if ok {
-				typeMetadata.Nodes[i].Nodes = make([]*entity.TypeMetadata, tmpStruct.NumFields())
+				typeMetadata.Nodes[i].Nodes = make([]*entity.DataTypeMetadata, tmpStruct.NumFields())
 				initNodes(typeMetadata.Nodes[i])
 				typeMetadata.Nodes[i].TypeKind = "struct"
 				parseStructInRecursion(typeMetadata.Nodes[i], tmpStruct)
