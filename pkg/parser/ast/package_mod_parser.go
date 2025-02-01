@@ -86,93 +86,93 @@ func (p *packageModeParser) parseStruct(obj types.Object) (*entity.JsonSchemaMet
 		return nil, fmt.Errorf("%s is not an struct. it is a %T", obj.Name(), obj.Type().Underlying())
 	}
 
-	root := entity.NewDataTypeMetadata(obj.Pkg().Path(), obj.Name(), "struct", false)
-	root.Nodes = make([]*entity.DataTypeMetadata, strct.NumFields())
+	rootMetadata := entity.NewDataTypeMetadata(obj.Pkg().Path(), obj.Name(), "struct", false)
 
-	mainMetadata := &entity.JsonSchemaMetadata{
-		/*
-			Root: &entity.DataTypeMetadata{
-				Package:     obj.Pkg().Path(),
-				TypeName:    obj.Name(),
-				TypeKind:    "struct",
-				Nodes:       make([]*entity.DataTypeMetadata, strct.NumFields()),
-				Tags:        nil,
-				IsPointer: false,
-			},
-		*/
-		Root: entity.NewDataTypeMetadata(obj.Pkg().Path(), obj.Name(), "struct", false),
+	mainMetadata := entity.NewJsonSchemaMetadata()
+
+	root, _, err := parseStructInRecursion(mainMetadata, strct, rootMetadata)
+	if err != nil {
+		return nil, err
 	}
-	initNodes(mainMetadata.Root)
-	parseStructInRecursion(mainMetadata.Root, strct)
+	mainMetadata.Root = root
 	return mainMetadata, nil
 }
 
-func initNodes(metadata *entity.DataTypeMetadata) {
-	for i := 0; i < len(metadata.Nodes); i++ {
-		metadata.Nodes[i] = &entity.DataTypeMetadata{}
+func parseStructInRecursion(schemaMetadata *entity.JsonSchemaMetadata, typ types.Type, currentMetadata *entity.DataTypeMetadata) (metadata *entity.DataTypeMetadata, isStruct bool, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("unknown error in parseStructInRecursion: %v", r)
+		}
+	}()
+	metadata = currentMetadata
+
+	pointer, isPointer := typ.(*types.Pointer)
+	if isPointer {
+		typ = pointer.Elem()
+	}
+	named, isNamed := typ.(*types.Named)
+	if isNamed {
+		obj := named.Obj()
+		//todo скорее всего неправильно выставлять "struct", могут быть другие типы для Named
+		metadata = entity.NewDataTypeMetadataWithBaseMetadata(currentMetadata, obj.Pkg().Path(), obj.Name(), "struct", isPointer)
+		typ = named.Underlying()
+	}
+
+	switch specificType := typ.(type) {
+	case *types.Basic:
+		metadata = entity.NewDataTypeMetadataWithBaseMetadata(currentMetadata, "", specificType.String(), specificType.String(), false)
+		return metadata, false, nil
+	case *types.Struct:
+		if dataTypeMetadata, ok := schemaMetadata.Types[metadata.ID()]; ok {
+			return dataTypeMetadata, true, nil
+		}
+		schemaMetadata.Types[metadata.ID()] = metadata
+
+		for i := 0; i < specificType.NumFields(); i++ {
+			field := specificType.Field(i)
+			fieldMetadata := &entity.DataTypeMetadata{
+				Package: field.Pkg().Path(),
+			}
+			tags := parseTags(specificType.Tag(i))
+			nodeTypeMetadata, isStruct, err := parseStructInRecursion(schemaMetadata, field.Type(), fieldMetadata)
+			if err != nil {
+				return nil, false, err
+			}
+
+			var nodeMetadata *entity.DataTypeMetadata
+			if isStruct {
+				nodeMetadata = entity.NewDataTypeRefMetadata(nodeTypeMetadata)
+			} else {
+				nodeMetadata = entity.NewDataTypeMetadata(nodeTypeMetadata.Package, nodeTypeMetadata.TypeName, nodeTypeMetadata.TypeKind, nodeTypeMetadata.IsPointer)
+				nodeMetadata.Nodes = nodeTypeMetadata.Nodes
+			}
+			nodeMetadata.Tags = tags
+			nodeMetadata.FieldName = field.Name()
+			_, isPointer = field.Type().(*types.Pointer)
+			nodeMetadata.IsPointer = isPointer
+
+			metadata.Nodes = append(metadata.Nodes, nodeMetadata)
+		}
+		return metadata, true, nil
+	default:
+		return nil, false, errors.New("incorrect and unexpected ype")
 	}
 }
 
-func parseStructInRecursion(typeMetadata *entity.DataTypeMetadata, strct *types.Struct) {
-	for i := 0; i < strct.NumFields(); i++ {
-		field := strct.Field(i)
-
-		_, ok := field.Type().(*types.Pointer)
-		typeMetadata.Nodes[i].IsPointer = ok
-		typeMetadata.Nodes[i].FieldName = field.Name()
-		typeMetadata.Nodes[i].Package = field.Pkg().Path()
-
-		typeMetadata.Nodes[i].Tags = make(map[string][]string)
-		tg := strct.Tag(i)
-		tags := strings.Split(tg, " ")
-		for _, tag := range tags {
-			tmp := strings.Split(tag, ":")
-			splited := strings.Split(tmp[1], ",")
-			length := len(splited)
-			if length > 1 {
-				splited[0] = splited[0][1:]
-				splited[length-1] = splited[length-1][:len(splited[length-1])-1]
-			} else if len(splited) == 1 {
-				splited[0] = splited[0][1 : len(splited[0])-1]
-			}
-			typeMetadata.Nodes[i].Tags[tmp[0]] = splited
+func parseTags(tg string) map[string][]string {
+	tagsResult := make(map[string][]string)
+	tags := strings.Split(tg, " ")
+	for _, tag := range tags {
+		tmp := strings.Split(tag, ":")
+		splited := strings.Split(tmp[1], ",")
+		length := len(splited)
+		if length > 1 {
+			splited[0] = splited[0][1:]
+			splited[length-1] = splited[length-1][:len(splited[length-1])-1]
+		} else if len(splited) == 1 {
+			splited[0] = splited[0][1 : len(splited[0])-1]
 		}
-
-		tmpNamed, ok := field.Type().(*types.Named)
-		if ok {
-			typeMetadata.Nodes[i].TypeName = tmpNamed.Obj().Name()
-			typeMetadata.Nodes[i].Package = tmpNamed.Obj().Pkg().Path()
-		}
-		tmpPtr, ok := field.Type().(*types.Pointer)
-		if ok {
-			if tmpNamed, ok = tmpPtr.Elem().(*types.Named); ok {
-				typeMetadata.Nodes[i].TypeName = tmpNamed.Obj().Name()
-				typeMetadata.Nodes[i].Package = tmpNamed.Obj().Pkg().Path()
-			}
-		}
-
-		t := field.Type()
-		switch v := t.(type) {
-		case *types.Basic:
-			typeMetadata.Nodes[i].TypeKind = v.String()
-			typeMetadata.Nodes[i].TypeName = v.String()
-			typeMetadata.Nodes[i].Package = ""
-		case *types.Named, *types.Pointer:
-			underlying := t.Underlying()
-			if val, ok := t.(*types.Pointer); ok {
-				underlying = val.Elem().Underlying()
-			}
-			tmpStruct, ok := underlying.(*types.Struct)
-			if ok {
-				typeMetadata.Nodes[i].Nodes = make([]*entity.DataTypeMetadata, tmpStruct.NumFields())
-				initNodes(typeMetadata.Nodes[i])
-				typeMetadata.Nodes[i].TypeKind = "struct"
-				parseStructInRecursion(typeMetadata.Nodes[i], tmpStruct)
-			} else {
-				typeMetadata.Nodes[i].TypeKind = "undefined"
-			}
-		default:
-			typeMetadata.Nodes[i].TypeKind = "undefined"
-		}
+		tagsResult[tmp[0]] = splited
 	}
+	return tagsResult
 }
