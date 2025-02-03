@@ -28,15 +28,32 @@ func NewDataTypeRefMetadata(ref *DataTypeMetadata) *DataTypeMetadata {
 	}
 }
 
-func NewDataTypeMetadata(packageName, typeName, typeKind string, isReference bool) *DataTypeMetadata {
+func NewDataTypeMetadata(packageName, typeName, typeKind string, isPointer bool) *DataTypeMetadata {
 	return &DataTypeMetadata{
 		Package:   packageName,
 		TypeName:  typeName,
 		TypeKind:  typeKind,
-		IsPointer: isReference,
+		IsPointer: isPointer,
 	}
 }
 
 func (m *DataTypeMetadata) ID() string {
 	return fmt.Sprintf("%s#%s", m.Package, m.TypeName)
+}
+
+func NewDataTypeMetadataWithBaseMetadata(metadata *DataTypeMetadata, packageName, typeName, typeKind string, isPointer bool) *DataTypeMetadata {
+	if metadata == nil {
+		return &DataTypeMetadata{
+			Package:   packageName,
+			TypeName:  typeName,
+			TypeKind:  typeKind,
+			IsPointer: isPointer,
+		}
+	}
+	metadata.Package = packageName
+	metadata.TypeName = typeName
+	metadata.TypeKind = typeKind
+	metadata.IsPointer = isPointer
+
+	return metadata
 }
